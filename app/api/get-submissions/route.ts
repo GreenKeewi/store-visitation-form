@@ -1,24 +1,35 @@
 import { MongoClient } from "mongodb";
 import { NextResponse } from "next/server";
 
-// MongoDB Atlas connection configuration
-const MONGODB_URI = process.env.MONGODB_URI;
-const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
+// Constants
 const COLLECTION_NAME = "store-visits";
 
-let client: MongoClient;
+// Global client promise for connection reuse
+let mongoClientPromise: Promise<MongoClient> | null = null;
 
-if (!global._mongoClientPromise) {
-  if (!MONGODB_URI) {
-    throw new Error("MONGODB_URI environment variable is not defined");
+function getMongoClient(uri: string): Promise<MongoClient> {
+  if (!mongoClientPromise) {
+    // MongoDB connection options for better reliability
+    const options = {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      maxIdleTimeMS: 30000,
+    };
+
+    const client = new MongoClient(uri, options);
+    mongoClientPromise = client.connect();
   }
-  client = new MongoClient(MONGODB_URI);
-  global._mongoClientPromise = client.connect();
+  return mongoClientPromise;
 }
-const mongoClientPromise = global._mongoClientPromise;
 
 export async function GET() {
   try {
+    // Get environment variables at runtime
+    const MONGODB_URI = process.env.MONGODB_URI;
+    const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
+
     // Validate environment
     if (!MONGODB_URI) {
       console.error("MONGODB_URI environment variable is not set");
@@ -29,7 +40,7 @@ export async function GET() {
     }
 
     // Connect to MongoDB Atlas
-    const client = await mongoClientPromise;
+    const client = await getMongoClient(MONGODB_URI);
     const db = client.db(DATABASE_NAME);
     const collection = db.collection(COLLECTION_NAME);
 

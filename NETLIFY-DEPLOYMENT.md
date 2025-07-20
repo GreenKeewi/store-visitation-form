@@ -33,11 +33,13 @@ To successfully deploy this application on Netlify, you need to configure the fo
 
 ### Important Notes:
 
-1. **Environment Variables are Runtime Only**: The app now loads environment variables at runtime (when API routes are called) rather than at build time, which resolves the previous build errors.
+1. **Fixed Build Issue**: The previous build error (`MONGODB_URI environment variable is not defined`) has been resolved by moving environment variable access from build-time to runtime in all API routes.
 
-2. **MongoDB Atlas IP Whitelist**: Make sure to whitelist `0.0.0.0/0` (allow from anywhere) in your MongoDB Atlas network access settings for Netlify deployments.
+2. **Environment Variables are Runtime Only**: The app now loads environment variables at runtime (when API routes are called) rather than at build time, which resolves build errors and ensures compatibility with serverless deployments.
 
-3. **API Routes**: All API routes (`/api/submit-form` and `/api/test-db`) will work correctly once environment variables are properly configured.
+3. **MongoDB Atlas IP Whitelist**: Make sure to whitelist `0.0.0.0/0` (allow from anywhere) in your MongoDB Atlas network access settings for Netlify deployments.
+
+4. **API Routes**: All API routes (`/api/submit-form` and `/api/test-db`) will work correctly once environment variables are properly configured.
 
 ### Testing Deployment:
 
