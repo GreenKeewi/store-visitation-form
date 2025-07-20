@@ -1,5 +1,6 @@
 // Simple environment test script
-require("dotenv").config({ path: ".env.local" });
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
 console.log("Environment Variables Test:");
 console.log("=========================");
