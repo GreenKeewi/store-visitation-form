@@ -87,6 +87,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -138,10 +139,9 @@ export function LoginForm({
   // Success alert state
   const [showSuccess, setShowSuccess] = React.useState(false);
 
-  // Automatic date state - initialized with current date and time
-  const [visitDate, setVisitDate] = React.useState(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
+  // Automatic date state - initialized with current date only
+  const [visitDate, setVisitDate] = React.useState<Date>(() => {
+    return new Date(); // Current date as Date object
   });
 
   // Form submission handler
@@ -151,6 +151,7 @@ export function LoginForm({
     // Debug: Log all current form values
     console.log("Form submission started");
     console.log("Current form values:", {
+      visitDate: visitDate.toISOString().slice(0, 10),
       tmValue,
       storeValue,
       spValue,
@@ -217,6 +218,7 @@ export function LoginForm({
       territoryManager: tmValue,
       storeName: storeValue,
       serviceProvider: spValue,
+      visitDate: visitDate.toISOString().slice(0, 10), // Convert Date to YYYY-MM-DD format
       storeEngagement: {
         modName,
         associateNames,
@@ -291,6 +293,9 @@ export function LoginForm({
         setPromoSetup("");
         setComments("");
 
+        // Reset visit date to current date
+        setVisitDate(new Date());
+
         // Hide success alert after 5 seconds
         setTimeout(() => {
           setShowSuccess(false);
@@ -335,6 +340,20 @@ export function LoginForm({
         <CardContent>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
+              {/* Automatic Date Field */}
+              <div className="grid gap-3">
+                <Label htmlFor="visit-date">Visit Date</Label>
+                <DatePicker
+                  date={visitDate}
+                  onDateChange={(date) => setVisitDate(date || new Date())}
+                  placeholder="Select visit date"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Automatically set to current date (editable)
+                </p>
+              </div>
+
               <div className="grid gap-3">
                 <Label htmlFor="">Territory Manager *</Label>
                 <Popover open={tmOpen} onOpenChange={setTmOpen}>

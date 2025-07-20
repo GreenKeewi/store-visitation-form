@@ -1,13 +1,7 @@
-import dotenv from "dotenv";
 import { MongoClient } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
-// Load environment variables from .env.local
-dotenv.config({ path: ".env.local" });
-
-// MongoDB Atlas connection configuration
-const MONGODB_URI = process.env.MONGODB_URI;
-const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
+// Constants
 const COLLECTION_NAME = "store-visits";
 
 // Rate limiting for production
@@ -15,31 +9,34 @@ const rateLimit = new Map();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX_REQUESTS = 10; // max requests per window
 
-let client: MongoClient;
+// Global client promise for connection reuse
+let mongoClientPromise: Promise<MongoClient> | null = null;
 
-if (!global._mongoClientPromise) {
-  if (!MONGODB_URI) {
-    throw new Error("MONGODB_URI environment variable is not defined");
+function getMongoClient(uri: string): Promise<MongoClient> {
+  if (!mongoClientPromise) {
+    // MongoDB connection options for better reliability
+    const options = {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      maxIdleTimeMS: 30000,
+    };
+
+    const client = new MongoClient(uri, options);
+    mongoClientPromise = client.connect();
   }
-
-  // MongoDB connection options for better reliability
-  const options = {
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 10000,
-    maxIdleTimeMS: 30000,
-  };
-
-  client = new MongoClient(MONGODB_URI, options);
-  global._mongoClientPromise = client.connect();
+  return mongoClientPromise;
 }
-const mongoClientPromise = global._mongoClientPromise;
 
 export async function POST(request: NextRequest) {
   console.log("API route called - starting POST handler");
 
   try {
+    // Get environment variables at runtime
+    const MONGODB_URI = process.env.MONGODB_URI;
+    const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
+
     // Rate limiting
     const ip =
       request.headers.get("x-forwarded-for") ||
@@ -97,15 +94,15 @@ export async function POST(request: NextRequest) {
     console.log("Connecting to MongoDB...");
 
     // Connect to MongoDB Atlas with timeout
-    const client = (await Promise.race([
-      mongoClientPromise,
-      new Promise((_, reject) =>
+    const client = await Promise.race([
+      getMongoClient(MONGODB_URI),
+      new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error("Connection timeout after 10 seconds")),
           10000
         )
       ),
-    ])) as MongoClient;
+    ]);
 
     console.log("Connected to MongoDB, preparing document...");
 
@@ -139,6 +136,9 @@ export async function POST(request: NextRequest) {
       message: "Store visit form submitted successfully",
     });
   } catch (error) {
+    // Get MONGODB_URI for error logging (in case it was set during the try block)
+    const MONGODB_URI = process.env.MONGODB_URI;
+
     console.error("Error saving to MongoDB Atlas:", error);
     console.error("Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
@@ -175,14 +175,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Declare global type for TypeScript
-declare global {
-  var _mongoClientPromise: Promise<MongoClient>;
-}
-
-// Declare global type for TypeScript
-declare global {
-  var _mongoClientPromise: Promise<MongoClient>;
 }

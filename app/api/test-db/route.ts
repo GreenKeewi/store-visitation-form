@@ -1,19 +1,16 @@
 // Simple MongoDB connection test for Next.js API
-import dotenv from "dotenv";
 import { MongoClient } from "mongodb";
 import { NextResponse } from "next/server";
 
-// Load environment variables from .env.local
-dotenv.config({ path: ".env.local" });
-
 export async function GET() {
+  // Get environment variables at runtime, not at module load time
   const MONGODB_URI = process.env.MONGODB_URI;
   const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
 
   console.log("Testing MongoDB connection...");
   console.log("MONGODB_URI exists:", !!MONGODB_URI);
   console.log("DATABASE_NAME:", DATABASE_NAME);
-  console.log("Environment variables loaded from .env.local");
+  console.log("Environment variables loaded at runtime");
 
   if (!MONGODB_URI) {
     return NextResponse.json(
