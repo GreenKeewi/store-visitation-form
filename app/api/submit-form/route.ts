@@ -37,6 +37,17 @@ export async function POST(request: NextRequest) {
     const MONGODB_URI = process.env.MONGODB_URI;
     const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
 
+    // Debug logging
+    console.log("Environment check:");
+    console.log("- MONGODB_URI exists:", !!MONGODB_URI);
+    console.log("- MONGODB_URI length:", MONGODB_URI?.length || 0);
+    console.log("- DATABASE_NAME:", DATABASE_NAME);
+    console.log("- NODE_ENV:", process.env.NODE_ENV);
+    console.log(
+      "- All env keys:",
+      Object.keys(process.env).filter((key) => key.includes("MONGO"))
+    );
+
     // Rate limiting
     const ip =
       request.headers.get("x-forwarded-for") ||
