@@ -31,15 +31,19 @@ function getMongoClient(uri: string): Promise<MongoClient> {
 
 export async function POST(request: NextRequest) {
   console.log("API route called - starting POST handler");
+  console.log(
+    "Process environment keys:",
+    Object.keys(process.env).filter((k) => k.includes("MONGO"))
+  );
 
   try {
-    // Get environment variables at runtime
+    // Try multiple ways to get environment variables
     const MONGODB_URI = process.env.MONGODB_URI;
     const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
 
-    // Debug logging
+    // Enhanced debug logging
     console.log("Environment check:");
-    console.log("- MONGODB_URI exists:", !!MONGODB_URI);
+    console.log("- process.env.MONGODB_URI:", !!process.env.MONGODB_URI);
     console.log("- MONGODB_URI length:", MONGODB_URI?.length || 0);
     console.log("- DATABASE_NAME:", DATABASE_NAME);
     console.log("- NODE_ENV:", process.env.NODE_ENV);
@@ -47,6 +51,26 @@ export async function POST(request: NextRequest) {
       "- All env keys:",
       Object.keys(process.env).filter((key) => key.includes("MONGO"))
     );
+
+    // Validate environment with detailed error
+    if (!MONGODB_URI) {
+      console.error("❌ MONGODB_URI environment variable is not set");
+      console.error(
+        "Available env vars:",
+        Object.keys(process.env).filter((k) => k.includes("MONGO"))
+      );
+      return NextResponse.json(
+        {
+          error: "Database configuration error",
+          debug: "MONGODB_URI not found in environment variables",
+          availableEnvVars: Object.keys(process.env).filter((k) =>
+            k.includes("MONGO")
+          ),
+          allEnvCount: Object.keys(process.env).length,
+        },
+        { status: 500 }
+      );
+    }
 
     // Rate limiting
     const ip =
@@ -71,15 +95,6 @@ export async function POST(request: NextRequest) {
       } else {
         current.count++;
       }
-    }
-
-    // Validate environment
-    if (!MONGODB_URI) {
-      console.error("MONGODB_URI environment variable is not set");
-      return NextResponse.json(
-        { error: "Database configuration error" },
-        { status: 500 }
-      );
     }
 
     console.log("Getting request body...");

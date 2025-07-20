@@ -6,12 +6,6 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
 
-  // Environment variables for production
-  env: {
-    MONGODB_URI: process.env.MONGODB_URI,
-    MONGODB_DB: process.env.MONGODB_DB,
-  },
-
   // Security headers for production
   async headers() {
     return [
