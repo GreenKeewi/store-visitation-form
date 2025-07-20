@@ -334,7 +334,7 @@ export function LoginForm({
 
       <Card className="">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Enter your Info</CardTitle>
+          <CardTitle className="text-xl">Enter your</CardTitle>
           <CardDescription>Enter your Info</CardDescription>
         </CardHeader>
         <CardContent>
