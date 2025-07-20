@@ -3,74 +3,18 @@ import { Button } from "@/components/ui/button";
 import { SuccessAlert } from "@/components/ui/success-alert";
 import { cn } from "@/lib/utils";
 import * as React from "react";
-const tms = [
-  {
-    value: "Tom Scott",
-    label: "Tom Scott",
-  },
-  {
-    value: "John Smith",
-    label: "John Smith",
-  },
-  {
-    value: "Tim Horton",
-    label: "Tim Horton",
-  },
-  {
-    value: "Mason Anderson",
-    label: "Mason Anderson",
-  },
-  {
-    value: "Liam Miller",
-    label: "Liam Miller",
-  },
-];
 
-const stores = [
-  {
-    value: "Cambridge Heating and Cooling",
-    label: "Cambridge Heating and Cooling",
-  },
-  {
-    value: "Others",
-    label: "Others",
-  },
-  {
-    value: "Others 2",
-    label: "Others 2",
-  },
-  {
-    value: "Others 3",
-    label: "Others 3",
-  },
-  {
-    value: "Others 4",
-    label: "Others 4",
-  },
-];
+// Types for dropdown options
+interface DropdownOption {
+  value: string;
+  label: string;
+  id?: string;
+}
 
-const sps = [
-  {
-    value: "Cambridge Heating and Cooling",
-    label: "Cambridge Heating and Cooling",
-  },
-  {
-    value: "Others",
-    label: "Others",
-  },
-  {
-    value: "Others 2",
-    label: "Others 2",
-  },
-  {
-    value: "Others 3",
-    label: "Others 3",
-  },
-  {
-    value: "Others 4",
-    label: "Others 4",
-  },
-];
+// Remove hardcoded arrays - we'll fetch from MongoDB instead
+// const tms = [...] - REMOVED
+// const stores = [...] - REMOVED
+// const sps = [...] - REMOVED
 
 import {
   Card,
@@ -103,6 +47,12 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  // Dynamic data states
+  const [tms, setTms] = React.useState<DropdownOption[]>([]);
+  const [stores, setStores] = React.useState<DropdownOption[]>([]);
+  const [sps, setSps] = React.useState<DropdownOption[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
   // Territory Manager state
   const [tmOpen, setTmOpen] = React.useState(false);
   const [tmValue, setTmValue] = React.useState("");
@@ -143,6 +93,52 @@ export function LoginForm({
   const [visitDate, setVisitDate] = React.useState<Date>(() => {
     return new Date(); // Current date as Date object
   });
+
+  // Fetch dropdown data from MongoDB
+  React.useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch all dropdown data in parallel
+        const [tmsResponse, storesResponse, spsResponse] = await Promise.all([
+          fetch("/api/territory-managers"),
+          fetch("/api/stores"),
+          fetch("/api/service-providers"),
+        ]);
+
+        // Parse responses
+        const tmsData = await tmsResponse.json();
+        const storesData = await storesResponse.json();
+        const spsData = await spsResponse.json();
+
+        // Update state if requests were successful
+        if (tmsData.success) {
+          setTms(tmsData.data);
+        } else {
+          console.error("Failed to fetch territory managers:", tmsData.error);
+        }
+
+        if (storesData.success) {
+          setStores(storesData.data);
+        } else {
+          console.error("Failed to fetch stores:", storesData.error);
+        }
+
+        if (spsData.success) {
+          setSps(spsData.data);
+        } else {
+          console.error("Failed to fetch service providers:", spsData.error);
+        }
+      } catch (error) {
+        console.error("Error fetching dropdown data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
 
   // Form submission handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -362,9 +358,13 @@ export function LoginForm({
                       variant="outline"
                       role="combobox"
                       aria-expanded={tmOpen}
+                      aria-label="Select Territory Manager"
                       className="w-full justify-between"
+                      disabled={isLoading}
                     >
-                      {tmValue
+                      {isLoading
+                        ? "Loading..."
+                        : tmValue
                         ? tms.find((framework) => framework.value === tmValue)
                             ?.label
                         : "Select TM..."}
@@ -378,7 +378,9 @@ export function LoginForm({
                         className="h-9"
                       />
                       <CommandList>
-                        <CommandEmpty>No TM found.</CommandEmpty>
+                        <CommandEmpty>
+                          {isLoading ? "Loading..." : "No TM found."}
+                        </CommandEmpty>
                         <CommandGroup>
                           {tms.map((framework) => (
                             <CommandItem
@@ -418,9 +420,13 @@ export function LoginForm({
                       variant="outline"
                       role="combobox"
                       aria-expanded={storeOpen}
+                      aria-label="Select Store Name and Number"
                       className="w-full justify-between"
+                      disabled={isLoading}
                     >
-                      {storeValue
+                      {isLoading
+                        ? "Loading..."
+                        : storeValue
                         ? stores.find(
                             (framework) => framework.value === storeValue
                           )?.label
@@ -435,7 +441,9 @@ export function LoginForm({
                         className="h-9"
                       />
                       <CommandList>
-                        <CommandEmpty>No Store found.</CommandEmpty>
+                        <CommandEmpty>
+                          {isLoading ? "Loading..." : "No Store found."}
+                        </CommandEmpty>
                         <CommandGroup>
                           {stores.map((framework) => (
                             <CommandItem
@@ -475,9 +483,13 @@ export function LoginForm({
                       variant="outline"
                       role="combobox"
                       aria-expanded={spOpen}
+                      aria-label="Select Service Provider Assigned to Store"
                       className="w-full justify-between"
+                      disabled={isLoading}
                     >
-                      {spValue
+                      {isLoading
+                        ? "Loading..."
+                        : spValue
                         ? sps.find((framework) => framework.value === spValue)
                             ?.label
                         : "Select Service Provider..."}
@@ -491,7 +503,11 @@ export function LoginForm({
                         className="h-9"
                       />
                       <CommandList>
-                        <CommandEmpty>No Service Provider found.</CommandEmpty>
+                        <CommandEmpty>
+                          {isLoading
+                            ? "Loading..."
+                            : "No Service Provider found."}
+                        </CommandEmpty>
                         <CommandGroup>
                           {sps.map((framework) => (
                             <CommandItem
@@ -589,6 +605,7 @@ export function LoginForm({
                       value={cleanliness}
                       onValueChange={setCleanliness}
                       className="flex flex-row"
+                      aria-label="Store cleanliness status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="cleanliness-yes" />
@@ -607,6 +624,7 @@ export function LoginForm({
                       value={pamphlets}
                       onValueChange={setPamphlets}
                       className="flex flex-row"
+                      aria-label="Pamphlets and business cards availability"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="pamphlets-yes" />
@@ -625,6 +643,7 @@ export function LoginForm({
                       value={unitsCondition}
                       onValueChange={setUnitsCondition}
                       className="flex flex-row"
+                      aria-label="Units condition status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="units-condition-yes" />
@@ -646,6 +665,7 @@ export function LoginForm({
                       value={unitsVisible}
                       onValueChange={setUnitsVisible}
                       className="flex flex-row"
+                      aria-label="Units visibility and cleanliness status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="units-visible-yes" />
@@ -664,6 +684,7 @@ export function LoginForm({
                       value={displayCondition}
                       onValueChange={setDisplayCondition}
                       className="flex flex-row"
+                      aria-label="Display condition status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem
@@ -687,6 +708,7 @@ export function LoginForm({
                       value={cleanedDisplay}
                       onValueChange={setCleanedDisplay}
                       className="flex flex-row"
+                      aria-label="Display cleaning completion status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="cleaned-display-yes" />
@@ -716,6 +738,7 @@ export function LoginForm({
                       value={promoDisplayed}
                       onValueChange={setPromoDisplayed}
                       className="flex flex-row"
+                      aria-label="Promotional material display status"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="yes" id="promo-displayed-yes" />
@@ -735,6 +758,7 @@ export function LoginForm({
                         value={promoSetup}
                         onValueChange={setPromoSetup}
                         className="flex flex-row"
+                        aria-label="Promotional setup completion status"
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="done" id="promo-setup-done" />
@@ -766,7 +790,11 @@ export function LoginForm({
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                aria-label="Submit Store Visitation Form"
+              >
                 Submit
               </Button>
             </div>
