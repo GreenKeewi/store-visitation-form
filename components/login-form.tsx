@@ -71,6 +71,12 @@ export function LoginForm({
   const [visitPurpose, setVisitPurpose] = React.useState("");
   const [timeSpent, setTimeSpent] = React.useState("");
 
+  // HVAC Sales state
+  const [totalLeads, setTotalLeads] = React.useState("");
+  const [closingRatio, setClosingRatio] = React.useState("");
+  const [sales, setSales] = React.useState("");
+  const [pipeline, setPipeline] = React.useState("");
+
   // Store Display state
   const [cleanliness, setCleanliness] = React.useState("");
   const [pamphlets, setPamphlets] = React.useState("");
@@ -221,6 +227,12 @@ export function LoginForm({
         visitPurpose,
         timeSpent,
       },
+      hvacSales: {
+        totalLeads,
+        closingRatio,
+        sales,
+        pipeline,
+      },
       storeDisplay: {
         cleanliness,
         pamphlets,
@@ -279,6 +291,10 @@ export function LoginForm({
         setAssociateNames("");
         setVisitPurpose("");
         setTimeSpent("");
+        setTotalLeads("");
+        setClosingRatio("");
+        setSales("");
+        setPipeline("");
         setCleanliness("");
         setPamphlets("");
         setUnitsCondition("");
@@ -330,8 +346,8 @@ export function LoginForm({
 
       <Card className="">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Enter your</CardTitle>
-          <CardDescription>Enter your Info</CardDescription>
+          <CardTitle className="text-xl">Store Visitation Tracker</CardTitle>
+          <CardDescription></CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -587,6 +603,79 @@ export function LoginForm({
                     placeholder="min / hours"
                     value={timeSpent}
                     onChange={(e) => setTimeSpent(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* HVAC Sales Section */}
+              <div className="grid gap-6 border-t pt-6">
+                <h3 className="text-lg font-semibold">Store Sales in HVAC</h3>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="total-leads">Total Leads (###)</Label>
+                  <Input
+                    id="total-leads"
+                    placeholder="0000"
+                    value={totalLeads}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "");
+                      setTotalLeads(value);
+                    }}
+                    maxLength={4}
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="closing-ratio">Closing Ratio (##.#%)</Label>
+                  <Input
+                    id="closing-ratio"
+                    placeholder="00.0"
+                    value={closingRatio}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, "");
+                      // Ensure only one decimal point and proper format
+                      const parts = value.split(".");
+                      if (parts.length > 2) return;
+                      if (parts[1] && parts[1].length > 1) return;
+                      setClosingRatio(value);
+                    }}
+                    maxLength={4}
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="sales">Sales ($####.##)</Label>
+                  <Input
+                    id="sales"
+                    placeholder="00000.00"
+                    value={sales}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, "");
+                      // Ensure only one decimal point and proper format
+                      const parts = value.split(".");
+                      if (parts.length > 2) return;
+                      if (parts[1] && parts[1].length > 2) return;
+                      setSales(value);
+                    }}
+                    maxLength={8}
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="pipeline">Pipeline ($#####.##)</Label>
+                  <Input
+                    id="pipeline"
+                    placeholder="000000.00"
+                    value={pipeline}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, "");
+                      // Ensure only one decimal point and proper format
+                      const parts = value.split(".");
+                      if (parts.length > 2) return;
+                      if (parts[1] && parts[1].length > 2) return;
+                      setPipeline(value);
+                    }}
+                    maxLength={9}
                   />
                 </div>
               </div>
