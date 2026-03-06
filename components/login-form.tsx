@@ -95,10 +95,12 @@ export function LoginForm({
   // Success alert state
   const [showSuccess, setShowSuccess] = React.useState(false);
 
-  // Automatic date state - initialized with current date only
-  const [visitDate, setVisitDate] = React.useState<Date>(() => {
-    return new Date(); // Current date as Date object
-  });
+  // Automatic date state - initialize on client mount to avoid SSR/client time drift hydration mismatch
+  const [visitDate, setVisitDate] = React.useState<Date | undefined>(undefined);
+
+  React.useEffect(() => {
+    setVisitDate(new Date());
+  }, []);
 
   // Fetch dropdown data from MongoDB
   React.useEffect(() => {
@@ -194,7 +196,7 @@ export function LoginForm({
     // Debug: Log all current form values
     console.log("Form submission started");
     console.log("Current form values:", {
-      visitDate: visitDate.toISOString().slice(0, 10),
+      visitDate: (visitDate || new Date()).toISOString().slice(0, 10),
       tmValue,
       storeValue,
       spValue,
@@ -261,7 +263,7 @@ export function LoginForm({
       territoryManager: tmValue,
       storeName: storeValue,
       serviceProvider: spValue,
-      visitDate: visitDate.toISOString().slice(0, 10), // Convert Date to YYYY-MM-DD format
+      visitDate: (visitDate || new Date()).toISOString().slice(0, 10), // Convert Date to YYYY-MM-DD format
       storeEngagement: {
         modName,
         associateNames,
@@ -419,13 +421,16 @@ export function LoginForm({
                       className="w-full justify-between"
                       disabled={isLoading}
                     >
-                      {isLoading
-                        ? "Loading..."
-                        : tmValue
-                          ? tms.find((framework) => framework.value === tmValue)
-                              ?.label
-                          : "Select TM..."}
-                      <ChevronsUpDown className="opacity-50" />
+                      <span className="truncate text-left">
+                        {isLoading
+                          ? "Loading..."
+                          : tmValue
+                            ? tms.find(
+                                (framework) => framework.value === tmValue,
+                              )?.label
+                            : "Select TM..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[--radix-popover-trigger-width] p-0">
@@ -481,14 +486,16 @@ export function LoginForm({
                       className="w-full justify-between"
                       disabled={isLoading}
                     >
-                      {isLoading
-                        ? "Loading..."
-                        : storeValue
-                          ? stores.find(
-                              (framework) => framework.value === storeValue,
-                            )?.label
-                          : "Select Store..."}
-                      <ChevronsUpDown className="opacity-50" />
+                      <span className="truncate text-left">
+                        {isLoading
+                          ? "Loading..."
+                          : storeValue
+                            ? stores.find(
+                                (framework) => framework.value === storeValue,
+                              )?.label
+                            : "Select Store..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[--radix-popover-trigger-width] p-0">
@@ -544,13 +551,16 @@ export function LoginForm({
                       className="w-full justify-between"
                       disabled={isLoading}
                     >
-                      {isLoading
-                        ? "Loading..."
-                        : spValue
-                          ? sps.find((framework) => framework.value === spValue)
-                              ?.label
-                          : "Select Service Provider..."}
-                      <ChevronsUpDown className="opacity-50" />
+                      <span className="truncate text-left">
+                        {isLoading
+                          ? "Loading..."
+                          : spValue
+                            ? sps.find(
+                                (framework) => framework.value === spValue,
+                              )?.label
+                            : "Select Service Provider..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[--radix-popover-trigger-width] p-0">
