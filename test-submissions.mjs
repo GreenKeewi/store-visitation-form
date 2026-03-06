@@ -43,7 +43,7 @@ async function testSubmissions() {
 
             totalFound += count;
           }
-        } catch (err) {
+        } catch {
           // Skip collections that don't exist
         }
       }
