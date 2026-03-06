@@ -1,8 +1,11 @@
+import { randomUUID } from "crypto";
+import fs from "fs/promises";
 import { MongoClient } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
 // Constants
-const COLLECTION_NAME = "store-visits";
+const COLLECTION_NAME = "visitations";
 
 // Rate limiting for production
 const rateLimit = new Map();
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
   console.log("API route called - starting POST handler");
   console.log(
     "Process environment keys:",
-    Object.keys(process.env).filter((k) => k.includes("MONGO"))
+    Object.keys(process.env).filter((k) => k.includes("MONGO")),
   );
 
   try {
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
     console.log("- NODE_ENV:", process.env.NODE_ENV);
     console.log(
       "- All env keys:",
-      Object.keys(process.env).filter((key) => key.includes("MONGO"))
+      Object.keys(process.env).filter((key) => key.includes("MONGO")),
     );
 
     // Validate environment with detailed error
@@ -57,18 +60,18 @@ export async function POST(request: NextRequest) {
       console.error("❌ MONGODB_URI environment variable is not set");
       console.error(
         "Available env vars:",
-        Object.keys(process.env).filter((k) => k.includes("MONGO"))
+        Object.keys(process.env).filter((k) => k.includes("MONGO")),
       );
       return NextResponse.json(
         {
           error: "Database configuration error",
           debug: "MONGODB_URI not found in environment variables",
           availableEnvVars: Object.keys(process.env).filter((k) =>
-            k.includes("MONGO")
+            k.includes("MONGO"),
           ),
           allEnvCount: Object.keys(process.env).length,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
       } else if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
         return NextResponse.json(
           { error: "Too many requests. Please try again later." },
-          { status: 429 }
+          { status: 429 },
         );
       } else {
         current.count++;
@@ -113,34 +116,14 @@ export async function POST(request: NextRequest) {
           error:
             "Territory Manager, Store Name, and Service Provider are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log("Connecting to MongoDB...");
-
-    // Connect to MongoDB Atlas with timeout
-    const client = await Promise.race([
-      getMongoClient(MONGODB_URI),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Connection timeout after 10 seconds")),
-          10000
-        )
-      ),
-    ]);
-
-    console.log("Connected to MongoDB, preparing document...");
-
-    // Test the connection by pinging the database
-    await client.db("admin").command({ ping: 1 });
-    console.log("Database ping successful");
-
-    const db = client.db(DATABASE_NAME);
-    const collection = db.collection(COLLECTION_NAME);
+    console.log("Connecting to MongoDB or falling back to local storage...");
 
     // Prepare document with audit information
-    const document = {
+    const documentBase = {
       ...body,
       metadata: {
         ipAddress: ip,
@@ -150,17 +133,98 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log("Inserting document into collection...");
-    // Insert the document
-    const result = await collection.insertOne(document);
+    // If explicitly configured to use MongoDB and a URI exists, try Mongo first
+    const useMongo = (process.env.USE_MONGO || "true").toLowerCase() === "true";
 
-    console.log("Document inserted successfully:", result.insertedId);
+    if (useMongo && MONGODB_URI) {
+      try {
+        // Connect to MongoDB Atlas with timeout
+        const client = await Promise.race([
+          getMongoClient(MONGODB_URI),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Connection timeout after 10 seconds")),
+              10000,
+            ),
+          ),
+        ]);
 
-    return NextResponse.json({
-      success: true,
-      id: result.insertedId,
-      message: "Store visit form submitted successfully",
-    });
+        console.log("Connected to MongoDB, preparing document...");
+
+        // Test the connection by pinging the database
+        await client.db("admin").command({ ping: 1 });
+        console.log("Database ping successful");
+
+        const db = client.db(DATABASE_NAME);
+        const collection = db.collection(COLLECTION_NAME);
+
+        // Insert the document into MongoDB
+        const result = await collection.insertOne(documentBase);
+
+        console.log(
+          "Document inserted successfully to MongoDB:",
+          result.insertedId,
+        );
+
+        return NextResponse.json({
+          success: true,
+          id: result.insertedId,
+          message: "Store visit form submitted successfully (MongoDB)",
+        });
+      } catch (mongoErr) {
+        console.warn(
+          "MongoDB unavailable or failed; falling back to local storage:",
+          mongoErr.message,
+        );
+        // fall through to file storage
+      }
+    }
+
+    // Fallback: store submissions in a local JSON file
+    const dataDir = path.join(process.cwd(), "data");
+    const filePath = path.join(dataDir, "submissions.json");
+
+    // Ensure directory exists
+    try {
+      await fs.mkdir(dataDir, { recursive: true });
+    } catch (mkdirErr) {
+      console.error("Failed to create data directory:", mkdirErr);
+    }
+
+    // Read existing submissions
+    let submissions = [] as any[];
+    try {
+      const fileContents = await fs.readFile(filePath, "utf8");
+      submissions = JSON.parse(fileContents || "[]");
+      if (!Array.isArray(submissions)) submissions = [];
+    } catch (readErr) {
+      // If file does not exist or is invalid, we'll create a new one
+      submissions = [];
+    }
+
+    const newDoc = { id: randomUUID(), ...documentBase };
+    submissions.unshift(newDoc); // newest first
+
+    // Write back (atomic write could be added if needed)
+    try {
+      await fs.writeFile(
+        filePath,
+        JSON.stringify(submissions, null, 2),
+        "utf8",
+      );
+      console.log("Document saved to local file storage with id:", newDoc.id);
+      return NextResponse.json({
+        success: true,
+        id: newDoc.id,
+        message: "Store visit form submitted successfully (file)",
+      });
+    } catch (writeErr) {
+      console.error("Failed to write submission to file:", writeErr);
+      return NextResponse.json(
+        { error: "Failed to save submission" },
+        { status: 500 },
+      );
+    }
   } catch (error) {
     // Get MONGODB_URI for error logging (in case it was set during the try block)
     const MONGODB_URI = process.env.MONGODB_URI;
@@ -198,7 +262,7 @@ export async function POST(request: NextRequest) {
         details: error instanceof Error ? error.message : "Unknown error",
         type: error instanceof Error ? error.name : "Unknown",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

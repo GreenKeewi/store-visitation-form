@@ -113,28 +113,69 @@ export function LoginForm({
           fetch("/api/service-providers"),
         ]);
 
-        // Parse responses
-        const tmsData = await tmsResponse.json();
-        const storesData = await storesResponse.json();
-        const spsData = await spsResponse.json();
+        // Helper to parse each response and return a normalized result
+        const parseResponse = async (resp: Response, name: string) => {
+          if (!resp.ok) {
+            // Try to parse JSON error body, fall back to text/status
+            try {
+              const errBody = await resp.json();
+              return {
+                success: false,
+                error:
+                  errBody?.error || errBody?.message || JSON.stringify(errBody),
+                status: resp.status,
+              };
+            } catch (e) {
+              const text = await resp.text();
+              return {
+                success: false,
+                error: text || resp.statusText || `HTTP ${resp.status}`,
+                status: resp.status,
+              };
+            }
+          }
 
-        // Update state if requests were successful
-        if (tmsData.success) {
+          // If OK, attempt to parse JSON; handle invalid JSON gracefully
+          try {
+            const body = await resp.json();
+            return body;
+          } catch (e) {
+            return {
+              success: false,
+              error: `Invalid JSON response from ${name}`,
+              status: resp.status,
+            };
+          }
+        };
+
+        const tmsData = await parseResponse(tmsResponse, "territory-managers");
+        const storesData = await parseResponse(storesResponse, "stores");
+        const spsData = await parseResponse(spsResponse, "service-providers");
+
+        // Update state if requests were successful, otherwise log concise info and continue
+        if (tmsData && tmsData.success) {
           setTms(tmsData.data);
         } else {
-          console.error("Failed to fetch territory managers:", tmsData.error);
+          // Avoid noisy stack traces; log useful debug info
+          console.info(
+            "Could not load Territory Managers:",
+            tmsData?.error || "unknown error",
+          );
         }
 
-        if (storesData.success) {
+        if (storesData && storesData.success) {
           setStores(storesData.data);
         } else {
-          console.error("Failed to fetch stores:", storesData.error);
+          console.info("Could not load Stores:", storesData?.error || "");
         }
 
-        if (spsData.success) {
+        if (spsData && spsData.success) {
           setSps(spsData.data);
         } else {
-          console.error("Failed to fetch service providers:", spsData.error);
+          console.info(
+            "Could not load Service Providers:",
+            spsData?.error || "",
+          );
         }
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
@@ -210,8 +251,8 @@ export function LoginForm({
     if (requiredFields.length > 0) {
       alert(
         `Please fill in all required fields:\n\n• ${requiredFields.join(
-          "\n• "
-        )}`
+          "\n• ",
+        )}`,
       );
       return;
     }
@@ -252,7 +293,7 @@ export function LoginForm({
     try {
       console.log("Submitting form data:", formData);
 
-      const response = await fetch("/api/submit-form", {
+      const response = await fetch("/api/visits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -272,7 +313,7 @@ export function LoginForm({
         const responseText = await response.text();
         console.log("Raw response text:", responseText);
         alert(
-          "Error: Invalid response from server. Please check console for details."
+          "Error: Invalid response from server. Please check console for details.",
         );
         return;
       }
@@ -381,9 +422,9 @@ export function LoginForm({
                       {isLoading
                         ? "Loading..."
                         : tmValue
-                        ? tms.find((framework) => framework.value === tmValue)
-                            ?.label
-                        : "Select TM..."}
+                          ? tms.find((framework) => framework.value === tmValue)
+                              ?.label
+                          : "Select TM..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -404,7 +445,7 @@ export function LoginForm({
                               value={framework.value}
                               onSelect={(currentValue) => {
                                 setTmValue(
-                                  currentValue === tmValue ? "" : currentValue
+                                  currentValue === tmValue ? "" : currentValue,
                                 );
                                 setTmOpen(false);
                               }}
@@ -415,7 +456,7 @@ export function LoginForm({
                                   "ml-auto",
                                   tmValue === framework.value
                                     ? "opacity-100"
-                                    : "opacity-0"
+                                    : "opacity-0",
                                 )}
                               />
                             </CommandItem>
@@ -443,10 +484,10 @@ export function LoginForm({
                       {isLoading
                         ? "Loading..."
                         : storeValue
-                        ? stores.find(
-                            (framework) => framework.value === storeValue
-                          )?.label
-                        : "Select Store..."}
+                          ? stores.find(
+                              (framework) => framework.value === storeValue,
+                            )?.label
+                          : "Select Store..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -469,7 +510,7 @@ export function LoginForm({
                                 setStoreValue(
                                   currentValue === storeValue
                                     ? ""
-                                    : currentValue
+                                    : currentValue,
                                 );
                                 setStoreOpen(false);
                               }}
@@ -480,7 +521,7 @@ export function LoginForm({
                                   "ml-auto",
                                   storeValue === framework.value
                                     ? "opacity-100"
-                                    : "opacity-0"
+                                    : "opacity-0",
                                 )}
                               />
                             </CommandItem>
@@ -506,9 +547,9 @@ export function LoginForm({
                       {isLoading
                         ? "Loading..."
                         : spValue
-                        ? sps.find((framework) => framework.value === spValue)
-                            ?.label
-                        : "Select Service Provider..."}
+                          ? sps.find((framework) => framework.value === spValue)
+                              ?.label
+                          : "Select Service Provider..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -531,7 +572,7 @@ export function LoginForm({
                               value={framework.value}
                               onSelect={(currentValue) => {
                                 setSpValue(
-                                  currentValue === spValue ? "" : currentValue
+                                  currentValue === spValue ? "" : currentValue,
                                 );
                                 setSpOpen(false);
                               }}
@@ -542,7 +583,7 @@ export function LoginForm({
                                   "ml-auto",
                                   spValue === framework.value
                                     ? "opacity-100"
-                                    : "opacity-0"
+                                    : "opacity-0",
                                 )}
                               />
                             </CommandItem>
