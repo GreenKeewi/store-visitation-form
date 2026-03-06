@@ -53,15 +53,26 @@ export async function GET() {
   try {
     // Get environment variables at runtime
     const MONGODB_URI = process.env.MONGODB_URI;
+    console.log("[get-submissions] MONGODB_URI exists:", !!MONGODB_URI);
+
     const databaseCandidates = getDatabaseCandidates(MONGODB_URI);
     const collectionCandidates = [COLLECTION_NAME, "store-visits"];
 
+    console.log("[get-submissions] Database candidates:", databaseCandidates);
+    console.log(
+      "[get-submissions] Collection candidates:",
+      collectionCandidates,
+    );
+
     // If configured to use MongoDB and URI exists, try Mongo first
     const useMongo = (process.env.USE_MONGO || "true").toLowerCase() === "true";
+    console.log("[get-submissions] useMongo:", useMongo);
+
     if (useMongo && MONGODB_URI) {
       try {
-        console.log("Attempting to connect to MongoDB...");
+        console.log("[get-submissions] Attempting to connect to MongoDB...");
         const client = await getMongoClient(MONGODB_URI);
+        console.log("[get-submissions] Connected to MongoDB");
         const fetchedByKey = new Map<string, any>();
 
         for (const dbName of databaseCandidates) {
@@ -76,6 +87,10 @@ export async function GET() {
               })
               .limit(200)
               .toArray();
+
+            console.log(
+              `[get-submissions] ${dbName}.${collectionName}: ${records.length} records`,
+            );
 
             for (const record of records) {
               const key = String(

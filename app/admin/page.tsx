@@ -121,33 +121,90 @@ export default function AdminPage() {
   };
 
   const getCSVHeaders = (): string[] => {
-    const headerSet = new Set<string>();
-
-    submissions.forEach((submission) => {
-      Object.keys(submission).forEach((key) => {
-        if (key !== "_id") {
-          headerSet.add(key);
-        }
-      });
-    });
-
-    return Array.from(headerSet).sort();
+    // Define headers in the exact order the form is filled out
+    return [
+      "Visit Date",
+      "Territory Manager",
+      "Store Name",
+      "Service Provider",
+      "MOD/Store Manager Name",
+      "Store Associates Names",
+      "Purpose of Visit",
+      "Time Spent in Store",
+      "Total Leads",
+      "Closing Ratio",
+      "Sales",
+      "Pipeline",
+      "Cleanliness",
+      "Pamphlets and Business Cards",
+      "Units in Good Condition",
+      "Units Clear and Visible",
+      "Display in Good Condition",
+      "Display Cleaned",
+      "Promo Displayed",
+      "Promo Setup",
+      "Comments",
+      "Submitted At",
+    ];
   };
 
   const getCSVRow = (
     submission: Submission,
     headers: string[],
   ): (string | any)[] => {
-    return headers.map((header) => {
-      const value = submission[header];
-      if (value === null || value === undefined) {
-        return "";
+    // Map submission data to match the header order
+    const getValue = (key: string): string => {
+      switch (key) {
+        case "Visit Date":
+          return submission.visitDate || "";
+        case "Territory Manager":
+          return submission.territoryManager || "";
+        case "Store Name":
+          return submission.storeName || "";
+        case "Service Provider":
+          return submission.serviceProvider || "";
+        case "MOD/Store Manager Name":
+          return submission.storeEngagement?.modName || "";
+        case "Store Associates Names":
+          return submission.storeEngagement?.associateNames || "";
+        case "Purpose of Visit":
+          return submission.storeEngagement?.visitPurpose || "";
+        case "Time Spent in Store":
+          return submission.storeEngagement?.timeSpent || "";
+        case "Total Leads":
+          return submission.hvacSales?.totalLeads || "";
+        case "Closing Ratio":
+          return submission.hvacSales?.closingRatio || "";
+        case "Sales":
+          return submission.hvacSales?.sales || "";
+        case "Pipeline":
+          return submission.hvacSales?.pipeline || "";
+        case "Cleanliness":
+          return submission.storeDisplay?.cleanliness || "";
+        case "Pamphlets and Business Cards":
+          return submission.storeDisplay?.pamphlets || "";
+        case "Units in Good Condition":
+          return submission.storeDisplay?.unitsCondition || "";
+        case "Units Clear and Visible":
+          return submission.storeDisplay?.unitsVisible || "";
+        case "Display in Good Condition":
+          return submission.storeDisplay?.displayCondition || "";
+        case "Display Cleaned":
+          return submission.storeDisplay?.cleanedDisplay || "";
+        case "Promo Displayed":
+          return submission.promoExecution?.promoDisplayed || "";
+        case "Promo Setup":
+          return submission.promoExecution?.promoSetup || "";
+        case "Comments":
+          return submission.comments || "";
+        case "Submitted At":
+          return submission.submittedAt || submission.metadata?.createdAt || "";
+        default:
+          return "";
       }
-      if (typeof value === "object") {
-        return JSON.stringify(value);
-      }
-      return String(value);
-    });
+    };
+
+    return headers.map((header) => getValue(header));
   };
 
   const formatValue = (value: any): string => {
