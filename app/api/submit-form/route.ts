@@ -15,6 +15,12 @@ const RATE_LIMIT_MAX_REQUESTS = 10; // max requests per window
 // Global client promise for connection reuse
 let mongoClientPromise: Promise<MongoClient> | null = null;
 
+type SubmissionRecord = Record<string, unknown>;
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function getMongoClient(uri: string): Promise<MongoClient> {
   if (!mongoClientPromise) {
     // MongoDB connection options for better reliability
@@ -174,7 +180,7 @@ export async function POST(request: NextRequest) {
       } catch (mongoErr) {
         console.warn(
           "MongoDB unavailable or failed; falling back to local storage:",
-          mongoErr.message,
+          getErrorMessage(mongoErr),
         );
         // fall through to file storage
       }
@@ -192,12 +198,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Read existing submissions
-    let submissions = [] as any[];
+    let submissions: SubmissionRecord[] = [];
     try {
       const fileContents = await fs.readFile(filePath, "utf8");
-      submissions = JSON.parse(fileContents || "[]");
-      if (!Array.isArray(submissions)) submissions = [];
-    } catch (readErr) {
+      const parsedData: unknown = JSON.parse(fileContents || "[]");
+      if (Array.isArray(parsedData)) {
+        submissions = parsedData.filter(
+          (item): item is SubmissionRecord =>
+            typeof item === "object" && item !== null,
+        );
+      }
+    } catch {
       // If file does not exist or is invalid, we'll create a new one
       submissions = [];
     }
