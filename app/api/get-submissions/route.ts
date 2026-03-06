@@ -26,11 +26,35 @@ function getMongoClient(uri: string): Promise<MongoClient> {
   return mongoClientPromise;
 }
 
+function getDatabaseNameFromUri(uri: string): string | null {
+  try {
+    const parsed = new URL(uri);
+    const dbName = parsed.pathname.replace(/^\//, "").trim();
+    return dbName || null;
+  } catch {
+    return null;
+  }
+}
+
+function getDatabaseCandidates(uri?: string): string[] {
+  const candidates = [
+    process.env.MONGODB_DB,
+    uri ? getDatabaseNameFromUri(uri) : null,
+    "store-visits",
+    "store-visitation-tracker",
+  ];
+
+  return Array.from(
+    new Set(candidates.filter((name): name is string => Boolean(name))),
+  );
+}
+
 export async function GET() {
   try {
     // Get environment variables at runtime
     const MONGODB_URI = process.env.MONGODB_URI;
-    const DATABASE_NAME = process.env.MONGODB_DB || "store-visits";
+    const databaseCandidates = getDatabaseCandidates(MONGODB_URI);
+    const collectionCandidates = [COLLECTION_NAME, "store-visits"];
 
     // If configured to use MongoDB and URI exists, try Mongo first
     const useMongo = (process.env.USE_MONGO || "true").toLowerCase() === "true";
@@ -38,15 +62,52 @@ export async function GET() {
       try {
         console.log("Attempting to connect to MongoDB...");
         const client = await getMongoClient(MONGODB_URI);
-        const db = client.db(DATABASE_NAME);
-        const collection = db.collection(COLLECTION_NAME);
+        const fetchedByKey = new Map<string, any>();
 
-        // Get all submissions, sorted by most recent first
-        const submissions = await collection
-          .find({})
-          .sort({ submittedAt: -1, "metadata.createdAt": -1, visitDate: -1 })
-          .limit(100) // Limit to last 100 submissions
-          .toArray();
+        for (const dbName of databaseCandidates) {
+          for (const collectionName of collectionCandidates) {
+            const collection = client.db(dbName).collection(collectionName);
+            const records = await collection
+              .find({})
+              .sort({
+                "metadata.createdAt": -1,
+                submittedAt: -1,
+                visitDate: -1,
+              })
+              .limit(200)
+              .toArray();
+
+            for (const record of records) {
+              const key = String(
+                record?._id ||
+                  `${record?.metadata?.createdAt || ""}-${record?.submittedAt || ""}-${record?.storeName || ""}`,
+              );
+              if (!fetchedByKey.has(key)) {
+                fetchedByKey.set(key, record);
+              }
+            }
+          }
+        }
+
+        const submissions = Array.from(fetchedByKey.values())
+          .sort((a: any, b: any) => {
+            const dateA = new Date(
+              a?.metadata?.createdAt ||
+                a?.metadata?.submittedAt ||
+                a?.submittedAt ||
+                a?.visitDate ||
+                0,
+            ).getTime();
+            const dateB = new Date(
+              b?.metadata?.createdAt ||
+                b?.metadata?.submittedAt ||
+                b?.submittedAt ||
+                b?.visitDate ||
+                0,
+            ).getTime();
+            return dateB - dateA;
+          })
+          .slice(0, 100);
 
         console.log(`Retrieved ${submissions.length} submissions from MongoDB`);
         return NextResponse.json({

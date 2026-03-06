@@ -38,6 +38,16 @@ function getMongoClient(uri: string): Promise<MongoClient> {
   return mongoClientPromise;
 }
 
+function getDatabaseNameFromUri(uri: string): string | null {
+  try {
+    const parsed = new URL(uri);
+    const dbName = parsed.pathname.replace(/^\//, "").trim();
+    return dbName || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   console.log("API route called - starting POST handler");
   console.log(
@@ -48,7 +58,10 @@ export async function POST(request: NextRequest) {
   try {
     // Try multiple ways to get environment variables
     const MONGODB_URI = process.env.MONGODB_URI;
-    const DATABASE_NAME = process.env.MONGODB_DB || "store-visitation-tracker";
+    const DATABASE_NAME =
+      process.env.MONGODB_DB ||
+      getDatabaseNameFromUri(MONGODB_URI || "") ||
+      "store-visits";
 
     // Enhanced debug logging
     console.log("Environment check:");
