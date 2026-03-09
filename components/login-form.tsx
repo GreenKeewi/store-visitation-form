@@ -394,9 +394,9 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-6">
+            <div className="grid gap-6 min-w-0">
               {/* Automatic Date Field */}
-              <div className="grid gap-3">
+              <div className="grid gap-3 min-w-0">
                 <Label htmlFor="visit-date">Visit Date</Label>
                 <DatePicker
                   date={visitDate}
@@ -409,7 +409,7 @@ export function LoginForm({
                 </p>
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid gap-3 min-w-0">
                 <Label htmlFor="">Territory Manager *</Label>
                 <Popover open={tmOpen} onOpenChange={setTmOpen}>
                   <PopoverTrigger asChild>
@@ -418,7 +418,7 @@ export function LoginForm({
                       role="combobox"
                       aria-expanded={tmOpen}
                       aria-label="Select Territory Manager"
-                      className="w-full justify-between"
+                      className="w-full justify-between min-w-0 overflow-hidden"
                       disabled={isLoading}
                     >
                       <span className="truncate text-left">
@@ -472,7 +472,7 @@ export function LoginForm({
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="grid gap-3">
+              <div className="grid gap-3 min-w-0">
                 <div className="flex items-center">
                   <Label htmlFor="">Store Name and Number *</Label>
                 </div>
@@ -483,7 +483,7 @@ export function LoginForm({
                       role="combobox"
                       aria-expanded={storeOpen}
                       aria-label="Select Store Name and Number"
-                      className="w-full justify-between"
+                      className="w-full justify-between min-w-0 overflow-hidden"
                       disabled={isLoading}
                     >
                       <span className="truncate text-left">
@@ -539,7 +539,7 @@ export function LoginForm({
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="grid gap-3">
+              <div className="grid gap-3 min-w-0">
                 <Label htmlFor="">Service Provider Assigned to Store *</Label>
                 <Popover open={spOpen} onOpenChange={setSpOpen}>
                   <PopoverTrigger asChild>
@@ -548,7 +548,7 @@ export function LoginForm({
                       role="combobox"
                       aria-expanded={spOpen}
                       aria-label="Select Service Provider Assigned to Store"
-                      className="w-full justify-between"
+                      className="w-full justify-between min-w-0 overflow-hidden"
                       disabled={isLoading}
                     >
                       <span className="truncate text-left">
